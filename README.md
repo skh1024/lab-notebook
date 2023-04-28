@@ -26,52 +26,91 @@ look at reads and look at diff sequences in the files
 what species is this - compare to BLAST
 
 # CODE:
+
 cp /tmp/gen711_project_data/fastp-single.sh ~/fastp-single.sh 
 
 chmod +x ~/fastp-single.sh
 
 mkdir trimmed_fastqs
 
-./fastp-single.sh 150 /tmp/gen711_project_data/FMT_3/fmt-tutorial-demux-1 trimmed_fastqs
+./fastp-single.sh 120 /tmp/gen711_project_data/FMT_3/fmt-tutorial-demux-1 trimmed_fastqs
 
-./fastp-single.sh 150 /tmp/gen711_project_data/FMT_3/fmt-tutorial-demux-2 trimmed_fastqs
+mkdir trimmed_fastqs2
+
+./fastp-single.sh 120 /tmp/gen711_project_data/FMT_3/fmt-tutorial-demux-2 trimmed_fastqs2
 
 conda activate qiime2-2022.8
 
-qiime tools import --type "SampleData[PairedEndSequencesWithQuality]" \
+IMPORT FASTQS TO QIIME
+1: qiime tools import --type "SampleData[SequencesWithQuality]" \
 --input-format CasavaOneEightSingleLanePerSampleDirFmt \
 --input-path trimmed_fastqs \
---output-path trimmed_fastqs/FMT_trimmed_fastqs
+--output-path trimmed_fastqs/FMT_trimmed_fastqs1.qza
 
-qiiime cutadapt trim-paired \
---i-demultiplexed-sequences FMT_trimmed_fastqs/FMT_trimmed_fastqs \
---p-cores 4 \
---p-front-f TACGTATGGTGCA \
+2: qiime tools import --type "SampleData[SequencesWithQuality]" \
+--input-format CasavaOneEightSingleLanePerSampleDirFmt \
+--input-path trimmed_fastqs2 \
+--output-path trimmed_fastqs2/FMT_trimmed_fastqs2.qza
+
+CUTADAPT
+1: qiime cutadapt trim-single \
+--i-demultiplexed-sequences trimmed_fastqs/FMT_trimmed_fastqs1.qza \
+--p-front TACGTATGGTGCA \
 --p-discard-untrimmed \
 --p-match-adapter-wildcards \
 --verbose \
---o-trimmed-sequences trimmed_fastqs/FMT_trimmed_fastqs.qza
+--o-trimmed-sequences trimmed_fastqs/FMT_cutadapt1.qza
 
-qiime demux summarize \
---i-data FMT_trimmed_fastqs/FMT_trimmed_fastqs.qza \
---o-visualization trimmed_fastqs/FMT_trimmed_fastqs.qzv
+2: qiime cutadapt trim-single \
+--i-demultiplexed-sequences trimmed_fastqs2/FMT_trimmed_fastqs2.qza \
+--p-front TACGTATGGTGCA \
+--p-discard-untrimmed \
+--p-match-adapter-wildcards \
+--verbose \
+--o-trimmed-sequences trimmed_fastqs2/FMT_cutadapt2.qza
 
-qiime dada2 denoise-paired \
---i-demultiplexed-seqs qiime_out/${run}_demux_cutadapt.qza \
---p-trunc-len-f ${trunclenf} \
---p-trunc-len-r ${trunclenr} \
---p-trim-left-f 0 \
---p-trim-left-r 0 \
+DEMUX
+1: qiime demux summarize \
+--i-data trimmed_fastqs/FMT_cutadapt1.qza \
+--o-visualization trimmed_fastqs/FMT_demux1.qzv
+
+2: qiime demux summarize \
+--i-data trimmed_fastqs2/FMT_cutadapt2.qza \
+--o-visualization trimmed_fastqs2/FMT_demux2.qzv
+
+DENOISE
+1: qiime dada2 denoise-single \
+--i-demultiplexed-seqs trimmed_fastqs/FMT_cutadapt1.qza \
+--p-trunc-len 50 \
+--p-trim-left 13 \
 --p-n-threads 4 \
---o-denoising-stats FMT_trimmed_fastqs/denoising-stats.qza \
---o-table FMT_trimmed_fastqs/feature_table.qza \
---o-representative-sequences FMT_trimmed_fastqs/rep-seqs.qza
+--o-denoising-stats denoising-stats1.qza \
+--o-table feature_table1.qza \
+--o-representative-sequences rep-seqs1.qza
 
-qiime metadata tabulate \
---m-input-file FMT_trimmed_fastqs/denoising-stats.qza \
---o-visualization FMT_trimmed_fastqs/denoising-stats.qzv
+2: qiime dada2 denoise-single \
+--i-demultiplexed-seqs trimmed_fastqs2/FMT_cutadapt2.qza \
+--p-trunc-len 50 \
+--p-trim-left 13 \
+--p-n-threads 4 \
+--o-denoising-stats denoising-stats2.qza \
+--o-table feature_table2.qza \
+--o-representative-sequences rep-seqs2.qza
 
-qiime feature-table tabulate-seqs \
---i-data FMT_trimmed_fastqs/rep-seqs.qza \
---o-visualization FMT_trimmed_fastqs/rep-seqs.qzv
+METADATA
+1: qiime metadata tabulate \
+--m-input-file denoising-stats1.qza \
+--o-visualization denoising-stats1.qzv
 
+2: qiime metadata tabulate \
+--m-input-file denoising-stats2.qza \
+--o-visualization denoising-stats2.qzv
+
+TABULATE
+1: qiime feature-table tabulate-seqs \
+--i-data rep-seqs1.qza \
+--o-visualization rep-seqs1.qzv
+
+2: qiime feature-table tabulate-seqs \
+--i-data rep-seqs2.qza \
+--o-visualization rep-seqs2.qzv
