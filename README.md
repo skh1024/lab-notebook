@@ -114,3 +114,30 @@ TABULATE
 2: qiime feature-table tabulate-seqs \
 --i-data rep-seqs2.qza \
 --o-visualization rep-seqs2.qzv
+
+TAXONOMY
+mkdir FMT_merged
+
+qiime feature-table merge-seqs \
+--i-data rep-seqs1.qza \
+--i-data rep-seqs2.qza \
+--o-merged-data FMT_merged/merged.rep-seqs.qza
+
+qiime feature-classifier classify-sklearn \
+--i-classifier /tmp/gen711_project_data/reference_databases/classifier.qza \
+--i-reads FMT_merged/merged.rep-seqs.qza \
+--o-classification FMT_merged/FMT-taxonomy.qza
+
+qiime taxa barplot \
+--i-table trimmed_fastqs/feature_table1.qza \
+--i-taxonomy FMT_taxonomy.qza \
+--o-visualization FMT_merged/barplot1.qzv
+
+qiime taxa barplot \
+--i-table trimmed_fastqs2/feature_table2.qza
+--i-taxonomy FMT_merged/FMT-taxonomy.qza
+--o-visualization FMT_merged/barplot2.qzv
+
+
+
+
